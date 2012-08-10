@@ -15,7 +15,11 @@ namespace Bent.Bot.Configuration
         string Name { get; }
         Jid Jid { get; }
         string Password { get; }
+        string ModulesDirectoryPath { get; }
         IEnumerable<Jid> Rooms { get; }
         IEnumerable<IModule> Modules { get; }
+
+        void EnableModule(string moduleName);
+        void DisableModule(string moduleName);
     }
 }
