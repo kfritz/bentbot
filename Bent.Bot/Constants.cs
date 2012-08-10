@@ -12,6 +12,8 @@ namespace Bent.Bot.Common
         {
             public const string Name = "name";
             public const string Modules = "modules";
+
+            public const string ModulesDirectory = "modulesdirectory";
             
             public const string XmppJid = "xmpp.jid";
             public const string XmppPassword = "xmpp.password";

@@ -68,7 +68,7 @@ namespace Bent.Bot
             FilterModules();
         }
 
-        private void FilterModules()
+        public void FilterModules()
         {
             foreach (var m in importedModules)
             {

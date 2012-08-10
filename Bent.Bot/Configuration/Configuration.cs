@@ -24,6 +24,7 @@ namespace Bent.Bot.Configuration
 
         private ModuleResolver moduleResolver;
         private IDictionary<string, string> configuration = new Dictionary<string, string>();
+        private ISet<string> enabledModules;
 
         public string this[string key]
         {
@@ -51,6 +52,11 @@ namespace Bent.Bot.Configuration
             get { return this[Constants.ConfigKey.XmppPassword]; }
         }
 
+        public string ModulesDirectoryPath
+        {
+            get { return this[Constants.ConfigKey.ModulesDirectory]; }
+        }
+
         public IEnumerable<Jid> Rooms
         {
             get
@@ -63,13 +69,25 @@ namespace Bent.Bot.Configuration
         {
             get
             {
-                if (moduleResolver == null)
-                {
-                    moduleResolver = new ModuleResolver(Regex.Split(this[Constants.ConfigKey.Modules], @"\s+"));
-                }
-
+                AssertModuleResolver();
                 return moduleResolver.GetModules();
             }
+        }
+
+        public void EnableModule(string moduleName)
+        {
+            enabledModules.Add(moduleName);
+            AssertModuleResolver();
+            moduleResolver.FilterModules();
+            //TODO: Write this change to the configuration file
+        }
+
+        public void DisableModule(string moduleName)
+        {
+            enabledModules.Remove(moduleName);
+            AssertModuleResolver();
+            moduleResolver.FilterModules();
+            //TODO: Write this change to the configuration file
         }
 
         public Configuration(Stream stream)
@@ -88,6 +106,21 @@ namespace Bent.Bot.Configuration
                 {
                     // TODO: Log a warning
                 }
+            }
+
+            enabledModules = new HashSet<string>(Regex.Split(this[Constants.ConfigKey.Modules], @"\s+"));
+        }
+
+        private void AssertModuleResolver()
+        {
+            if (moduleResolver == null)
+            {
+                DirectoryInfo modulesDirectory = null;
+                if (!string.IsNullOrWhiteSpace(ModulesDirectoryPath))
+                {
+                    modulesDirectory = new DirectoryInfo(ModulesDirectoryPath);
+                }
+                moduleResolver = new ModuleResolver(enabledModules, modulesDirectory);
             }
         }
     }
