@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -10,6 +11,7 @@ using Bent.Bot.Configuration;
 namespace Bent.Bot.Module
 {
     // TODO: needs to support XMPP presence: i.e. when a user joins a room or their status becomes available
+    [Export(typeof(IModule))]
     public class Pounce : IModule
     {
         private static Regex regex = new Regex(@"^\s*tell\s+(.+?)\s+that\s+(.+?)\s*$", RegexOptions.IgnoreCase | RegexOptions.Singleline);

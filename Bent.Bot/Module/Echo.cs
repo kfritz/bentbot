@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using Bent.Bot.Configuration;
 
 namespace Bent.Bot.Module
 {
+    [Export(typeof(IModule))]
     internal class Echo : IModule
     {
         private static Regex regex = new Regex(@"^\s*(?:say|echo)\s+(.+)$", RegexOptions.IgnoreCase | RegexOptions.Singleline);

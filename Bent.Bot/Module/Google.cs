@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -9,6 +10,7 @@ using Bent.Bot.Configuration;
 
 namespace Bent.Bot.Module
 {
+    [Export(typeof(IModule))]
     public class Google : IModule
     {
         private static Regex regex = new Regex(@"^\s*google\s+(.+?)\s*$", RegexOptions.IgnoreCase);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -12,6 +13,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Bent.Bot.Module
 {
+    [Export(typeof(IModule))]
     public class GirlUp : IModule
     {
         private static Regex regex = new Regex(@"girl\s+up\s+the\s+chat", RegexOptions.IgnoreCase | RegexOptions.Singleline);
