@@ -67,6 +67,7 @@
     <Compile Include="Interfaces\IBackend.cs" />
     <Compile Include="Interfaces\IMessage.cs" />
     <Compile Include="ModuleResolver.cs" />
+    <Compile Include="Module\Extend.cs" />
     <Compile Include="Module\Google.cs" />
     <Compile Include="Module\Manners.cs" />
     <Compile Include="Module\Reddit.cs" />
