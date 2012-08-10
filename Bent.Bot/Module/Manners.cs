@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using Bent.Bot.Configuration;
 
 namespace Bent.Bot.Module
 {
+    [Export(typeof(IModule))]
     public class Manners : IModule
     {
         private static List<string> phrases = new List<string> { "No problem, {0}.", "You're welcome, {0}.", "Happy to help, {0}." };

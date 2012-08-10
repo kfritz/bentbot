@@ -22,6 +22,7 @@ namespace Bent.Bot.Configuration
     {
         private static Regex configPattern = new Regex(@"^\s*(\S+)\s+(.+?)\s*$");
 
+        private ModuleResolver moduleResolver;
         private IDictionary<string, string> configuration = new Dictionary<string, string>();
 
         public string this[string key]
@@ -58,17 +59,16 @@ namespace Bent.Bot.Configuration
             }
         }
 
-        public IEnumerable<IModule> modules;
         public IEnumerable<IModule> Modules
         {
             get
             {
-                if (modules == null)
+                if (moduleResolver == null)
                 {
-                    modules = new ModuleResolver().Resolve(Regex.Split(this[Constants.ConfigKey.Modules], @"\s+"));
+                    moduleResolver = new ModuleResolver(Regex.Split(this[Constants.ConfigKey.Modules], @"\s+"));
                 }
 
-                return modules;
+                return moduleResolver.GetModules();
             }
         }
 

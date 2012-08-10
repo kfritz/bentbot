@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -15,6 +16,7 @@ namespace Bent.Bot.Module
     /*
      * ENHANCE: Utilize OpenGraph/OEmbed and then fallback to DiffBot
      */
+    [Export(typeof(IModule))]
     public class WebPreview : IModule
     {
         // TODO: this is a pretty restrictive regex

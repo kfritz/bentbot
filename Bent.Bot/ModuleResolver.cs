@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Bent.Bot.Module;
@@ -9,14 +13,70 @@ namespace Bent.Bot
 {
     internal class ModuleResolver
     {
-        public IModule Resolve(string name)
+        [ImportMany(typeof(IModule), AllowRecomposition = true)]
+        private IEnumerable<IModule> importedModules;
+        private List<IModule> loadedModules;
+        private IReadOnlyList<IModule> readOnlyModules;
+        private ISet<string> moduleNames;
+        private FileSystemWatcher watcher;
+        private DirectoryCatalog dirCatalog;
+        private CompositionContainer container;
+
+        public ModuleResolver(string moduleName, DirectoryInfo directory = null)
+            : this(Enumerable.Repeat(moduleName, 1), directory)
         {
-            return this.Resolve(Enumerable.Repeat(name, 1)).FirstOrDefault();
         }
 
-        public IEnumerable<IModule> Resolve(IEnumerable<string> names)
+        public ModuleResolver(IEnumerable<string> moduleNames, DirectoryInfo directory = null)
         {
-            return names.Select(i => Activator.CreateInstance(null, "Bent.Bot.Module." + i).Unwrap()).Cast<IModule>().ToList();
+            var assCatalog = new AssemblyCatalog(typeof(Program).Assembly);
+            var aggCatalog = new AggregateCatalog();
+            aggCatalog.Catalogs.Add(assCatalog);
+            if (directory != null)
+            {
+                WatchForAssemblies(directory, aggCatalog);
+            }
+            container = new CompositionContainer(aggCatalog);
+            container.ComposeParts(this);
+
+            this.moduleNames = new HashSet<string>(moduleNames);
+            loadedModules = new List<IModule>();
+            FilterModules();
+            readOnlyModules = loadedModules.AsReadOnly();
+        }
+
+        public IEnumerable<IModule> GetModules()
+        {
+            return readOnlyModules;
+        }
+        
+        private void WatchForAssemblies(DirectoryInfo directory, AggregateCatalog aggCatalog)
+        {
+            dirCatalog = new DirectoryCatalog(directory.FullName);
+            aggCatalog.Catalogs.Add(dirCatalog);
+
+            watcher = new FileSystemWatcher(directory.FullName, "*.dll");
+            watcher.Created += OnAssemblyChanged;
+            watcher.Changed += OnAssemblyChanged;
+            watcher.Deleted += OnAssemblyChanged;
+            watcher.EnableRaisingEvents = true;
+        }
+
+        private void OnAssemblyChanged(object sender, FileSystemEventArgs e)
+        {
+            dirCatalog.Refresh();
+            FilterModules();
+        }
+
+        private void FilterModules()
+        {
+            foreach (var m in importedModules)
+            {
+                if (moduleNames.Contains(m.GetType().Name) && !loadedModules.Contains(m))
+                {
+                    loadedModules.Add(m);
+                }
+            }
         }
     }
 }

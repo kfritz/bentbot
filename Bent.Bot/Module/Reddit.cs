@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -12,6 +13,7 @@ using Bent.Bot.Module;
 
 namespace Bent.Bot.Module
 {
+    [Export(typeof(IModule))]
     public class Reddit : IModule
     {
         private static Regex regex = new Regex(@"^\s*reddit", RegexOptions.IgnoreCase);
