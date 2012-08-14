@@ -10,6 +10,7 @@ namespace Bent.Bot.Framework
     internal class MessageImpl : IMessage
     {
         public IAddress ReplyTo { get; private set; }
+        public IAddress SenderAddress { get; private set; }
         public string SenderName { get; private set; }
 
         public bool IsAddressedAtMe { get; private set; }
@@ -29,6 +30,7 @@ namespace Bent.Bot.Framework
         public MessageImpl(MessageData message, string directedBody, bool isAddressedAtMe)
         {
             this.ReplyTo = message.ReplyTo;
+            this.SenderAddress = message.SenderAddress;
             this.SenderName = message.SenderName;
 
             this.IsAddressedAtMe = isAddressedAtMe;

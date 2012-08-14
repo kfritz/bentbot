@@ -92,6 +92,7 @@ namespace Bent.Bot.Backend.Xmpp.AgsXmpp
                                     new MessageData(
                                         // TODO: should we reply to the bare address all the time?
                                         replyTo: msg.Type == MessageType.groupchat ? msg.From.ToJid().Bare : msg.From.ToJid(),
+                                        senderAddress: msg.From.ToJid(),
                                         senderName: msg.Type == MessageType.groupchat ? msg.From.Resource : msg.From.User, // TODO: better way to do this...
                                         body: msg.Body,
                                         // TODO: is there a better way to check for this?

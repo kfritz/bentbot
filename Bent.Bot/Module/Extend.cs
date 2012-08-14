@@ -39,20 +39,26 @@ namespace Bent.Bot.Module
                 var match = regexGetDll.Match(message.Body);
                 if (match.Success)
                 {
-                    bool failed = false;
+                    Exception failureException = null;
                     try
                     {
                         Uri remoteUri = new Uri(match.Groups[1].Value, UriKind.Absolute);
                         await DownloadDll(remoteUri, message.SenderName);
                         await backend.SendMessageAsync(message.ReplyTo, GetRandomConfirmation());
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        failed = true;
+                        failureException = ex;
                     }
-                    if (failed)
+                    if (failureException != null)
                     {
-                        await backend.SendMessageAsync(message.ReplyTo, "Can't do that, sorry.");
+                        string apology = "I can't do that right now.  I'm sorry.";
+                        if (!message.ReplyTo.Equals(message.SenderAddress))
+                        {
+                            await backend.SendMessageAsync(message.ReplyTo, apology);
+                            apology = "I'm sorry I couldn't help you just now.";
+                        }
+                        await backend.SendMessageAsync(message.SenderAddress, apology + "  Here's the full exception message:\n\n" + failureException.Message);
                     }
                     return;
                 }

@@ -9,6 +9,7 @@ namespace Bent.Bot.Common
     public class MessageData
     {
         public IAddress ReplyTo { get; private set; }
+        public IAddress SenderAddress { get; private set; }
         public string SenderName { get; private set; }
 
         public bool IsFromMyself { get; private set; }
@@ -17,9 +18,10 @@ namespace Bent.Bot.Common
 
         public string Body { get; private set; }
 
-        public MessageData(IAddress replyTo, string senderName, string body, bool isFromMyself, bool isHistorical, bool isPrivate)
+        public MessageData(IAddress replyTo, IAddress senderAddress, string senderName, string body, bool isFromMyself, bool isHistorical, bool isPrivate)
         {
             this.ReplyTo = replyTo;
+            this.SenderAddress = senderAddress;
             this.SenderName = senderName;
 
             this.IsFromMyself = isFromMyself;
