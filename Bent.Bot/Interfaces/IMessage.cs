@@ -9,6 +9,7 @@ namespace Bent.Bot
     public interface IMessage
     {
         IAddress ReplyTo { get; }
+        IAddress SenderAddress { get; }
         string SenderName { get; }
 
         bool IsAddressedAtMe { get; }
