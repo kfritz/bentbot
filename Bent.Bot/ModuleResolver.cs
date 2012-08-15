@@ -17,7 +17,7 @@ namespace Bent.Bot
         private IEnumerable<IModule> importedModules;
         private List<IModule> loadedModules;
         private IReadOnlyList<IModule> readOnlyModules;
-        private ISet<string> moduleNames;
+        private IEnumerable<string> moduleNames;
         private FileSystemWatcher watcher;
         private DirectoryCatalog dirCatalog;
         private CompositionContainer container;
@@ -39,7 +39,7 @@ namespace Bent.Bot
             container = new CompositionContainer(aggCatalog);
             container.ComposeParts(this);
 
-            this.moduleNames = new HashSet<string>(moduleNames);
+            this.moduleNames = moduleNames;
             loadedModules = new List<IModule>();
             FilterModules();
             readOnlyModules = loadedModules.AsReadOnly();
