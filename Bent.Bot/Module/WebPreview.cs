@@ -36,23 +36,30 @@ namespace Bent.Bot.Module
 
         public async void OnMessage(IMessage message)
         {
-            if(!message.IsFromMyself && !message.IsHistorical)
+            try
             {
-                var match = regex.Match(message.FullBody);
-                if(regex.IsMatch(message.FullBody))
+                if (!message.IsFromMyself && !message.IsHistorical)
                 {
-                    var uri = new Uri(message.FullBody);
-                    if(uri.IsWellFormedOriginalString())
+                    var match = regex.Match(message.FullBody);
+                    if (regex.IsMatch(message.FullBody))
                     {
-                        var reply = this.MakeReply(await this.QueryAsync(uri));
-
-                        if(!String.IsNullOrWhiteSpace(reply))
+                        var uri = new Uri(message.FullBody);
+                        if (uri.IsWellFormedOriginalString())
                         {
-                            // TODO: gotta get new lines sorted out
-                            await this.backend.SendMessageAsync(message.ReplyTo, reply);
+                            var reply = this.MakeReply(await this.QueryAsync(uri));
+
+                            if (!String.IsNullOrWhiteSpace(reply))
+                            {
+                                // TODO: gotta get new lines sorted out
+                                await this.backend.SendMessageAsync(message.ReplyTo, reply);
+                            }
                         }
                     }
                 }
+            }
+            catch(Exception e)
+            {
+                Console.Error.WriteLine(e); // TODO: handle better
             }
         }
 
