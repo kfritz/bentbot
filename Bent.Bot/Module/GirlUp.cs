@@ -31,14 +31,21 @@ namespace Bent.Bot.Module
 
         public async void OnMessage(IMessage message)
         {
-            if (!message.IsFromMyself && !message.IsHistorical)
+            try
             {
-                var match = regex.Match(message.FullBody);
-
-                if (match.Success)
+                if (!message.IsFromMyself && !message.IsHistorical)
                 {
-                    await backend.SendMessageAsync(message.ReplyTo, await GetRandomProgrammerGoslingUrlAsync() + " " + new String('~', 3 + random.Next(11)));
+                    var match = regex.Match(message.FullBody);
+
+                    if (match.Success)
+                    {
+                        await backend.SendMessageAsync(message.ReplyTo, await GetRandomProgrammerGoslingUrlAsync() + " " + new String('~', 3 + random.Next(11)));
+                    }
                 }
+            }
+            catch(Exception e)
+            {
+                Console.Error.WriteLine(e); // TODO: Handle better
             }
         }
 
