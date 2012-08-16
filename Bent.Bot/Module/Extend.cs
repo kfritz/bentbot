@@ -66,7 +66,7 @@ namespace Bent.Bot.Module
                 match = regexEnableModule.Match(message.Body);
                 if (match.Success)
                 {
-                    configuration.EnableModule(match.Groups[1].Value);
+                    configuration.EnableModule(match.Groups[1].Value, backend);
                     await backend.SendMessageAsync(message.ReplyTo, GetRandomConfirmation());
                     return;
                 }
