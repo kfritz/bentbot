@@ -28,10 +28,7 @@ namespace Bent.Bot
 
             this.regexDirected = new Regex(string.Format(@"^\s*@?{0}(?:,\s*|:\s*|\s+)(.+)$", this.config.Name), RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-            foreach (var module in this.config.Modules)
-            {
-                module.OnStart(config, backend);
-            }
+            this.config.Start(this.backend);
         }
 
         public async Task RunAsync()

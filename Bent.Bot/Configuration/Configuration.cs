@@ -74,11 +74,20 @@ namespace Bent.Bot.Configuration
             }
         }
 
-        public void EnableModule(string moduleName)
+        public void Start(IBackend backend)
+        {
+            foreach (var module in Modules)
+            {
+                module.OnStart(this, backend);
+            }
+        }
+
+        public void EnableModule(string moduleName, IBackend backend)
         {
             enabledModules.Add(moduleName);
             AssertModuleResolver();
             moduleResolver.FilterModules();
+            Start(backend);
             //TODO: Write this change to the configuration file
         }
 
