@@ -38,7 +38,7 @@ namespace Bent.Bot.Module
                 {
                     var target = match.Groups[1].Value;
 
-                    if (target.ToLowerInvariant().Contains("dwayne"))
+                    if (target.ToLowerInvariant().Contains("kpf") || target.ToLowerInvariant().Contains("kyle") || target.ToLowerInvariant().Contains("fritz"))
                     {
                         this.backend.SendMessageAsync(message.ReplyTo, String.Format("/me turns around and slaps {0} with a large trout!", message.SenderName));
                     }
