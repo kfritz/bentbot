@@ -19,7 +19,9 @@ namespace Bent.Bot.Configuration
         IEnumerable<Jid> Rooms { get; }
         IEnumerable<IModule> Modules { get; }
 
-        void EnableModule(string moduleName);
+        void Start(IBackend backend);
+
+        void EnableModule(string moduleName, IBackend backend);
         void DisableModule(string moduleName);
     }
 }
