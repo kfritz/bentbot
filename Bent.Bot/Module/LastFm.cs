@@ -17,9 +17,11 @@ namespace Bent.Bot.Module
     [Export(typeof(IModule))]
     public class LastFm : IModule
     {
-        private static Regex regex = new Regex(@"^\s*music\s+(.+?)\s*\.?\s*$", RegexOptions.IgnoreCase);
-        private static Regex similarRegex = new Regex(@"^\s*similar\s+to\s+(.+)\s*$", RegexOptions.IgnoreCase);
-        private static Regex discoveryChainRegex = new Regex(@"^\s*discovery\s+(.+)\s*$", RegexOptions.IgnoreCase);
+        private static Regex musicRegex = new Regex(@"^\s*music\s+(.+?)\s*\.?\s*$", RegexOptions.IgnoreCase);
+        private static Regex similarTrackRegex = new Regex(@"^\s*similar\s+to\s+""(.+)""\s+by\s+(.+)\s*$", RegexOptions.IgnoreCase);
+        private static Regex similarArtistRegex = new Regex(@"^\s*similar\s+to\s+(.+)\s*$", RegexOptions.IgnoreCase);
+        private static Regex discoveryChainArtistRegex = new Regex(@"^\s*discovery\s+(.+)\s*$", RegexOptions.IgnoreCase);
+        private static Regex discoveryChainTrackRegex = new Regex(@"^\s*discovery\s+""(.+)""\s+by\s+(.+)\s*$", RegexOptions.IgnoreCase);
         private static Regex helpRegex = new Regex(@"^\s*help\s*$");
 
         private IBackend backend;
@@ -37,7 +39,37 @@ namespace Bent.Bot.Module
         }
 
         // TODO: prevent cycles
-        private async Task<List<string>> DiscoveryChainLoop(string artist, int iterations)
+        private async Task<List<string>> DiscoveryChainTrackLoop(string artist, string track, int iterations)
+        {
+            Debug.Assert(iterations <= 10);
+            
+            var discovered = new List<Tuple<string, string>>();
+            var originalTrackName = new Tuple<string, string>(artist, track);
+            for (int i = 0; i < iterations; i++)
+            {
+                XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarTracksAsync(originalTrackName.Item1, originalTrackName.Item2);
+                List<Tuple<string,string>> similar = LastFmXmlParser.GetSimilarTrackNames(xml, out originalTrackName, true, 1);
+
+                if (i == 0)
+                {
+                    discovered.Add(originalTrackName);
+                }
+
+                if (similar.Any())
+                {
+                    discovered.Add(similar.First());
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return discovered.Select(x => String.Format("\"{0}\" by {1}", x.Item2, x.Item1)).ToList();
+        }
+
+        // TODO: prevent cycles
+        private async Task<List<string>> DiscoveryChainArtistLoop(string artist, int iterations)
         {
             Debug.Assert(iterations <= 10);
 
@@ -46,7 +78,7 @@ namespace Bent.Bot.Module
             string originalArtistName = artist;
             for (int i = 0; i < iterations; i++)
             {
-                XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarArtistsAsync(artist);
+                XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarArtistsAsync(originalArtistName);
                 List<string> similar = LastFmXmlParser.GetSimilarArtistNames(xml, out originalArtistName, true, 1);
 
                 if (i == 0)
@@ -57,6 +89,7 @@ namespace Bent.Bot.Module
                 if (similar.Any())
                 {
                     discovered.Add(similar.First());
+                    originalArtistName = similar.First();
                 }
                 else
                 {
@@ -73,26 +106,49 @@ namespace Bent.Bot.Module
             {
                 if (message.IsRelevant && !message.IsHistorical)
                 {
-                    string artist;
-                    var match = regex.Match(message.Body);
-                    var musicBody = match.Groups[1].Value;
-                    if (match.Success)
+                    string artist, track;
+                    var musicMatch = musicRegex.Match(message.Body);
+                    var musicBody = musicMatch.Groups[1].Value;
+                    if (musicMatch.Success)
                     {
-                        var similarMatch = similarRegex.Match(musicBody);
-                        if (similarMatch.Success)
+                        // TODO: Cleaner way of doing all this
+
+                        var similarTrackMatch = similarTrackRegex.Match(musicBody);
+                        if (similarTrackMatch.Success)
                         {
-                            artist = similarMatch.Groups[1].Value;
-                            XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarArtistsAsync(artist);
-                            await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateSimilarArtistResponse(xml));
+                            track = similarTrackMatch.Groups[1].Value;
+                            artist = similarTrackMatch.Groups[2].Value;
+                            XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarTracksAsync(artist, track);
+                            await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateSimilarTracksResponse(xml));
                             return;
                         }
 
-                        var discoveryChainMatch = discoveryChainRegex.Match(musicBody);
-                        if (discoveryChainMatch.Success)
+                        var similarArtistMatch = similarArtistRegex.Match(musicBody);
+                        if (similarArtistMatch.Success)
                         {
-                            artist = discoveryChainMatch.Groups[1].Value;
+                            artist = similarArtistMatch.Groups[1].Value;
+                            XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarArtistsAsync(artist);
+                            await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateSimilarArtistsResponse(xml));
+                            return;
+                        }
+
+                        var discoveryChainTrackMatch = discoveryChainTrackRegex.Match(musicBody);
+                        if (discoveryChainTrackMatch.Success)
+                        {
+                            track = discoveryChainTrackMatch.Groups[1].Value;
+                            artist = discoveryChainTrackMatch.Groups[2].Value;
                             await backend.SendMessageAsync(message.ReplyTo, "Looking for cool stuff. Please be patient.");
-                            List<string> discovered = await DiscoveryChainLoop(artist, 10);
+                            List<string> discovered = await DiscoveryChainTrackLoop(artist, track, 10);
+                            await backend.SendMessageAsync(message.ReplyTo, "Discovery chain:\r\n" + String.Join(" ->\r\n", discovered));
+                            return;
+                        }
+
+                        var discoveryChainArtistMatch = discoveryChainArtistRegex.Match(musicBody);
+                        if (discoveryChainArtistMatch.Success)
+                        {
+                            artist = discoveryChainArtistMatch.Groups[1].Value;
+                            await backend.SendMessageAsync(message.ReplyTo, "Looking for cool stuff. Please be patient.");
+                            List<string> discovered = await DiscoveryChainArtistLoop(artist, 10);
                             await backend.SendMessageAsync(message.ReplyTo, "Discovery chain: " + String.Join(" -> ", discovered));
                             return;
                         }
@@ -131,25 +187,61 @@ namespace Bent.Bot.Module
 
                 return names;
             }
+
+            public static List<Tuple<string, string>> GetSimilarTrackNames(XDocument xml, out Tuple<string, string> originalTrackName, bool isRandomized = false, int limit = 25)
+            {
+                Debug.Assert(limit > 0);
+
+                var similarTracksElement = xml.Descendants("similartracks").First();
+                originalTrackName = new Tuple<string, string>(
+                    similarTracksElement.Attribute("artist").Value,
+                    similarTracksElement.Attribute("track").Value
+                );
+
+                var r = new Random();
+                var tracks = new List<Tuple<string, string>>();
+                foreach (var item in xml.Descendants("track").OrderBy(x => isRandomized ? r.Next() : 0).Take(limit))
+                {
+                    tracks.Add(new Tuple<string,string>(
+                        item.Element("artist").Element("name").Value,
+                        item.Element("name").Value));
+                }
+
+                return tracks;
+            }
         }
 
         private static class LastFmResponse
         {
-            public static string CreateSimilarArtistResponse(XDocument xml, bool isRandomized = true, int limit = 10)
+            public static string CreateSimilarArtistsResponse(XDocument xml, bool isRandomized = true, int limit = 10)
             {
-                StringBuilder response = new StringBuilder();
-
                 string originalArtistName;
                 List<string> similarArtistNames = LastFmXmlParser.GetSimilarArtistNames(xml, out originalArtistName, isRandomized, limit);
-                
+
+                var response = new StringBuilder();
                 response
                     .Append("Similar artists to ")
                     .Append(originalArtistName)
-                    .Append(": ");
-
-                response
+                    .Append(": ")
                     .Append(String.Join(", ", similarArtistNames))
                     .Append(".");
+
+                return response.ToString();
+            }
+
+            public static string CreateSimilarTracksResponse(XDocument xml, bool isRandomized = false, int limit = 25)
+            {
+                Tuple<string, string> originalTrackName;
+                List<Tuple<string, string>> similarTrackNames = LastFmXmlParser.GetSimilarTrackNames(xml, out originalTrackName, isRandomized, limit);
+
+                Func<Tuple<string, string>, string> toFriendly = (x) => String.Format("\"{0}\" by {1}", x.Item2, x.Item1);
+
+                var response = new StringBuilder();
+                response
+                    .Append("Similar songs to ")
+                    .Append(toFriendly(originalTrackName))
+                    .Append(":\r\n")
+                    .Append(String.Join("\r\n", similarTrackNames.Select(x => toFriendly(x))));
 
                 return response.ToString();
             }
@@ -165,8 +257,14 @@ namespace Bent.Bot.Module
                 response.AppendLine(botName + " music similar to Rebecca Black");
                 response.AppendLine("    Returns a randomized list of artists that are similar to Rebecca Black.");
                 response.AppendLine();
+                response.AppendLine(botName + " music similar to \"Whip My Hair\" by Willow Smith");
+                response.AppendLine("    Returns a list of songs that are similar to \"Whip My Hair\" by Willow Smith, sorted by relevance.");
+                response.AppendLine();
                 response.AppendLine(botName + " music discovery Miley Cyrus");
                 response.AppendLine("    Returns a discovery chain of artists, beginning with Miley Cyrus.");
+                response.AppendLine();
+                response.AppendLine(botName + " music discovery \"Ice Ice Baby\" by Vanilla Ice");
+                response.AppendLine("    Returns a discovery chain of songs, beginning with \"Ice Ice Baby\" by Vanilla Ice.");
                 response.AppendLine();
                 response.AppendLine();
                 response.AppendLine("More cool features coming soon!");
