@@ -22,7 +22,7 @@ namespace Bent.Bot.Module
         public void OnStart(IConfiguration config, IBackend backend)
         {
             this.backend = backend;
-            this.regex = new Regex(String.Format("(thank|ty).*?{0}", config.Name), RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            this.regex = new Regex(String.Format(@"(thank.*?|^\s*ty,?(\s+.*)?)\s+{0}", config.Name), RegexOptions.IgnoreCase | RegexOptions.Singleline);
         }
 
         public void OnMessage(IMessage message)
