@@ -31,10 +31,23 @@ namespace Bent.Bot.Apis.LastFm
             return await QueryArtistAsync(LastFmMethod.Artist_GetSimilar, artist);
         }
 
+        public async Task<XDocument> GetSimilarTracksAsync(string artist, string track)
+        {
+            return await QueryTrackAsync(LastFmMethod.Track_GetSimilar, artist, track);
+        }
+
         private async Task<XDocument> QueryArtistAsync(LastFmMethod method, string artist)
         {
             Dictionary<string, string> query = new Dictionary<string, string>(){
                 { "artist", artist }
+            };
+            return await QueryAsync(GenerateUrl(method, query));
+        }
+
+        private async Task<XDocument> QueryTrackAsync(LastFmMethod method, string artist, string track)
+        {
+            Dictionary<string, string> query = new Dictionary<string, string>(){
+                { "artist", artist }, { "track", track }
             };
             return await QueryAsync(GenerateUrl(method, query));
         }

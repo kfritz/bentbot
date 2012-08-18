@@ -24,5 +24,7 @@ namespace Bent.Bot.Apis.LastFm
         Chart_GetTopArtists,
         [LastFmMethodName("chart.getTopTracks")]
         Chart_GetTopTracks,
+        [LastFmMethodName("track.getSimilar")]
+        Track_GetSimilar,
     }
 }
