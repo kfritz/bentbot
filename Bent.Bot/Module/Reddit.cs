@@ -17,6 +17,7 @@ namespace Bent.Bot.Module
     public class Reddit : IModule
     {
         private static Regex regex = new Regex(@"^\s*reddit(\s+(.+))?\s*$", RegexOptions.IgnoreCase);
+        private static Regex ultLinkRegex = new Regex(@"<br/>\s<a href=""(.+)"">\[link\]", RegexOptions.IgnoreCase);
 
         private Dictionary<string, HashSet<string>> seenLinks = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase); // TODO: persist
 
@@ -29,7 +30,6 @@ namespace Bent.Bot.Module
 
         public async void OnMessage(IMessage message)
         {
-
             try 
             {
                 if (message.IsRelevant)
@@ -41,9 +41,12 @@ namespace Bent.Bot.Module
                         string url = (subreddit == String.Empty) ? "http://www.reddit.com/.rss" : String.Format("http://www.reddit.com/r/{0}.rss", subreddit);
 
                         var response = await new HttpClient().GetAsync(url);
-                        if (!String.IsNullOrEmpty(subreddit) && response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                        if (!String.IsNullOrEmpty(subreddit) && (
+                                response.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                                response.RequestMessage.RequestUri.ToString().ToLowerInvariant() != url.ToString().ToLowerInvariant()))
                         {
                             await this.backend.SendMessageAsync(message.ReplyTo, "Sorry, couldn't find your subreddit. :-/");
+                            return;
                         }
                         response.EnsureSuccessStatusCode();
 
@@ -61,17 +64,19 @@ namespace Bent.Bot.Module
                         {
                             var titleEl = item.Elements("title").FirstOrDefault();
                             var linkEl = item.Elements("link").FirstOrDefault();
+                            var descEl = item.Elements("description").FirstOrDefault();
 
-                            if (titleEl != null && linkEl != null)
+                            if (titleEl != null && linkEl != null && descEl != null)
                             {
                                 var title = titleEl.Value;
                                 var link = linkEl.Value;
+                                var ultLink = GetUltimateLink(descEl.Value);
 
                                 if (!this.seenLinks[subreddit].Contains(link))
                                 {
                                     this.seenLinks[subreddit].Add(link);
 
-                                    messages.Add(String.Format("{0} <{1}>", title, link));
+                                    messages.Add(GetMessage(title, link, ultLink));
                                 }
                             }
                         }
@@ -99,6 +104,20 @@ namespace Bent.Bot.Module
             {
                 Console.Error.WriteLine(ex);  // TODO: better exception handling
             }
+        }
+
+        private string GetUltimateLink(string descriptionValue)
+        {
+            var match = ultLinkRegex.Match(descriptionValue);
+            if (match.Success) return match.Groups[1].Value;
+            return null;
+        }
+
+        private string GetMessage(string title, string link, string ultLink)
+        {
+            return String.Format("{0} <{1}>{2}", title, link, 
+                (!String.IsNullOrEmpty(ultLink) && ultLink != link) ? 
+                    " <" + ultLink + ">" : String.Empty);
         }
     }
 }

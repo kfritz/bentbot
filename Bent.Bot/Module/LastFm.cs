@@ -17,15 +17,25 @@ namespace Bent.Bot.Module
     [Export(typeof(IModule))]
     public class LastFm : IModule
     {
+        #region Regular Expressions
+
         private static Regex musicRegex = new Regex(@"^\s*music\s+(.+?)\s*\.?\s*$", RegexOptions.IgnoreCase);
         private static Regex similarTrackRegex = new Regex(@"^\s*similar\s+to\s+""(.+)""\s+by\s+(.+)\s*$", RegexOptions.IgnoreCase);
         private static Regex similarArtistRegex = new Regex(@"^\s*similar\s+to\s+(.+)\s*$", RegexOptions.IgnoreCase);
         private static Regex discoveryChainArtistRegex = new Regex(@"^\s*discovery\s+(.+)\s*$", RegexOptions.IgnoreCase);
         private static Regex discoveryChainTrackRegex = new Regex(@"^\s*discovery\s+""(.+)""\s+by\s+(.+)\s*$", RegexOptions.IgnoreCase);
-        private static Regex helpRegex = new Regex(@"^\s*help\s*$");
+        private static Regex helpRegex = new Regex(@"^\s*help\s*$", RegexOptions.IgnoreCase);
+
+        #endregion
+
+        #region Fields
 
         private IBackend backend;
         private IConfiguration config;
+
+        #endregion
+
+        #region IModule Members
 
         public void OnStart(IConfiguration config, IBackend backend)
         {
@@ -38,17 +48,116 @@ namespace Bent.Bot.Module
             TestMusic(message);
         }
 
+        #endregion
+
+        #region Regex Tests
+
+        private async void TestMusic(IMessage message)
+        {
+            try
+            {
+                if (message.IsRelevant && !message.IsHistorical)
+                {
+                    var musicMatch = musicRegex.Match(message.Body);
+                    var musicBody = musicMatch.Groups[1].Value;
+                    if (musicMatch.Success)
+                    {
+                        if (await TestSimilarTracks  (message, musicBody)) return;
+                        if (await TestSimilarArtists (message, musicBody)) return;
+                        if (await TestTrackDiscovery (message, musicBody)) return;
+                        if (await TestArtistDiscovery(message, musicBody)) return;
+                        if (await TestHelp           (message, musicBody)) return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
+        private async Task<bool> TestSimilarTracks(IMessage message, string musicBody)
+        {
+            var similarTrackMatch = similarTrackRegex.Match(musicBody);
+            if (similarTrackMatch.Success)
+            {
+                string track = similarTrackMatch.Groups[1].Value;
+                string artist = similarTrackMatch.Groups[2].Value;
+                XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarTracksAsync(artist, track);
+                await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateSimilarTracksResponse(xml));
+                return true;
+            }
+            return false;
+        }
+
+        private async Task<bool> TestSimilarArtists(IMessage message, string body)
+        {
+            var similarArtistMatch = similarArtistRegex.Match(body);
+            if (similarArtistMatch.Success)
+            {
+                string artist = similarArtistMatch.Groups[1].Value;
+                XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarArtistsAsync(artist);
+                await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateSimilarArtistsResponse(xml));
+                return true;
+            }
+            return false;
+        }
+
+        private async Task<bool> TestTrackDiscovery(IMessage message, string body)
+        {
+            var discoveryChainTrackMatch = discoveryChainTrackRegex.Match(body);
+            if (discoveryChainTrackMatch.Success)
+            {
+                string track = discoveryChainTrackMatch.Groups[1].Value;
+                string artist = discoveryChainTrackMatch.Groups[2].Value;
+                await backend.SendMessageAsync(message.ReplyTo, "Looking for cool stuff. Please be patient.");
+                List<string> discovered = await DiscoveryChainTrackLoop(artist, track, 10);
+                await backend.SendMessageAsync(message.ReplyTo, "Discovery chain:\r\n" + String.Join(" ->\r\n", discovered));
+                return true;
+            }
+            return false;
+        }
+
+        private async Task<bool> TestArtistDiscovery(IMessage message, string body)
+        {
+            var discoveryChainArtistMatch = discoveryChainArtistRegex.Match(body);
+            if (discoveryChainArtistMatch.Success)
+            {
+                string artist = discoveryChainArtistMatch.Groups[1].Value;
+                await backend.SendMessageAsync(message.ReplyTo, "Looking for cool stuff. Please be patient.");
+                List<string> discovered = await DiscoveryChainArtistLoop(artist, 10);
+                await backend.SendMessageAsync(message.ReplyTo, "Discovery chain: " + String.Join(" -> ", discovered));
+                return true;
+            }
+            return false;
+        }
+
+        private async Task<bool> TestHelp(IMessage message, string body)
+        {
+            var helpMatch = helpRegex.Match(body);
+            if (helpMatch.Success)
+            {
+                await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateHelpResponse(config.Name));
+                return true;
+            }
+            return false;
+        }
+
+        #endregion
+
+        #region Web Service Loops
+
         // TODO: prevent cycles
         private async Task<List<string>> DiscoveryChainTrackLoop(string artist, string track, int iterations)
         {
             Debug.Assert(iterations <= 10);
-            
+
             var discovered = new List<Tuple<string, string>>();
             var originalTrackName = new Tuple<string, string>(artist, track);
             for (int i = 0; i < iterations; i++)
             {
                 XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarTracksAsync(originalTrackName.Item1, originalTrackName.Item2);
-                List<Tuple<string,string>> similar = LastFmXmlParser.GetSimilarTrackNames(xml, out originalTrackName, true, 1);
+                List<Tuple<string, string>> similar = LastFmXmlParser.GetSimilarTrackNames(xml, out originalTrackName, true, 1);
 
                 if (i == 0)
                 {
@@ -100,73 +209,9 @@ namespace Bent.Bot.Module
             return discovered;
         }
 
-        private async void TestMusic(IMessage message)
-        {
-            try
-            {
-                if (message.IsRelevant && !message.IsHistorical)
-                {
-                    string artist, track;
-                    var musicMatch = musicRegex.Match(message.Body);
-                    var musicBody = musicMatch.Groups[1].Value;
-                    if (musicMatch.Success)
-                    {
-                        // TODO: Cleaner way of doing all this
+        #endregion
 
-                        var similarTrackMatch = similarTrackRegex.Match(musicBody);
-                        if (similarTrackMatch.Success)
-                        {
-                            track = similarTrackMatch.Groups[1].Value;
-                            artist = similarTrackMatch.Groups[2].Value;
-                            XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarTracksAsync(artist, track);
-                            await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateSimilarTracksResponse(xml));
-                            return;
-                        }
-
-                        var similarArtistMatch = similarArtistRegex.Match(musicBody);
-                        if (similarArtistMatch.Success)
-                        {
-                            artist = similarArtistMatch.Groups[1].Value;
-                            XDocument xml = await new LastFmClient(this.config[Common.Constants.ConfigKey.LastFmApiKey]).GetSimilarArtistsAsync(artist);
-                            await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateSimilarArtistsResponse(xml));
-                            return;
-                        }
-
-                        var discoveryChainTrackMatch = discoveryChainTrackRegex.Match(musicBody);
-                        if (discoveryChainTrackMatch.Success)
-                        {
-                            track = discoveryChainTrackMatch.Groups[1].Value;
-                            artist = discoveryChainTrackMatch.Groups[2].Value;
-                            await backend.SendMessageAsync(message.ReplyTo, "Looking for cool stuff. Please be patient.");
-                            List<string> discovered = await DiscoveryChainTrackLoop(artist, track, 10);
-                            await backend.SendMessageAsync(message.ReplyTo, "Discovery chain:\r\n" + String.Join(" ->\r\n", discovered));
-                            return;
-                        }
-
-                        var discoveryChainArtistMatch = discoveryChainArtistRegex.Match(musicBody);
-                        if (discoveryChainArtistMatch.Success)
-                        {
-                            artist = discoveryChainArtistMatch.Groups[1].Value;
-                            await backend.SendMessageAsync(message.ReplyTo, "Looking for cool stuff. Please be patient.");
-                            List<string> discovered = await DiscoveryChainArtistLoop(artist, 10);
-                            await backend.SendMessageAsync(message.ReplyTo, "Discovery chain: " + String.Join(" -> ", discovered));
-                            return;
-                        }
-
-                        var helpMatch = helpRegex.Match(musicBody);
-                        if (helpMatch.Success)
-                        {
-                           await backend.SendMessageAsync(message.ReplyTo, LastFmResponse.CreateHelpResponse(config.Name));
-                           return;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-        }
+        #region Private Classes
 
         private static class LastFmXmlParser
         {
@@ -272,5 +317,7 @@ namespace Bent.Bot.Module
                 return response.ToString();
             }
         }
+
+        #endregion
     }
 }

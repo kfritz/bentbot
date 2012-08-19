@@ -81,6 +81,7 @@
     <Compile Include="Module\Echo.cs" />
     <Compile Include="Module\GirlUp.cs" />
     <Compile Include="Module\IModule.cs" />
+    <Compile Include="Module\Wikipedia.cs" />
     <Compile Include="Module\WolframAlpha.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
