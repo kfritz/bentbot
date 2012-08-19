@@ -23,6 +23,8 @@ namespace Bent.Bot.Common
             public const string TumblrApiKey = "tumblr.apikey";
             public const string WolframAlphaApiKey = "wolframalpha.apikey";
             public const string LastFmApiKey = "lastfm.apikey";
+
+            public const string WikipediaAlias = "wikipedia.alias";
         }
     }
 }
