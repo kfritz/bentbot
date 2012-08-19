@@ -115,9 +115,8 @@ namespace Bent.Bot.Module
 
         private string GetMessage(string title, string link, string ultLink)
         {
-            return String.Format("{0} <{1}>{2}", title, link, 
-                (!String.IsNullOrEmpty(ultLink) && ultLink != link) ? 
-                    " <" + ultLink + ">" : String.Empty);
+            return String.Format("{0}\n{1}", title,
+                (String.IsNullOrEmpty(ultLink) ? link : ultLink));
         }
     }
 }
