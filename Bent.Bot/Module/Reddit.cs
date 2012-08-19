@@ -41,9 +41,12 @@ namespace Bent.Bot.Module
                         string url = (subreddit == String.Empty) ? "http://www.reddit.com/.rss" : String.Format("http://www.reddit.com/r/{0}.rss", subreddit);
 
                         var response = await new HttpClient().GetAsync(url);
-                        if (!String.IsNullOrEmpty(subreddit) && response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                        if (!String.IsNullOrEmpty(subreddit) && (
+                                response.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                                response.RequestMessage.RequestUri.ToString().ToLowerInvariant() != url.ToString().ToLowerInvariant()))
                         {
                             await this.backend.SendMessageAsync(message.ReplyTo, "Sorry, couldn't find your subreddit. :-/");
+                            return;
                         }
                         response.EnsureSuccessStatusCode();
 
