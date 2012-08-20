@@ -12,6 +12,7 @@ namespace Bent.Bot.Module.Seppuku
     public class Seppuku : IModule
     {
         private static Regex regex = new Regex(@"^\s*kill\s+yourself", RegexOptions.IgnoreCase);
+        private static Regex regexJenna = new Regex(@"^\s*ditch", RegexOptions.IgnoreCase);
         private static IList<string> lastWords = new List<string> {
             "Goodbye cruel world!",
             "I only ever loved you, {0}...",
@@ -33,9 +34,9 @@ namespace Bent.Bot.Module.Seppuku
         {
             if (message.IsRelevant)
             {
-                var match = regex.Match(message.Body);
+                var match = regex.Match(message.Body).Success || regexJenna.Match(message.Body).Success;
 
-                if (match.Success)
+                if (match)
                 {
                     await backend.SendMessageAsync(message.ReplyTo, string.Format(lastWords[random.Next(lastWords.Count)], message.SenderName));
                     Environment.Exit(0);
