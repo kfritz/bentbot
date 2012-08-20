@@ -50,6 +50,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Apis\LastFm\LastFmClient.cs" />
+    <Compile Include="Apis\LastFm\LastFmMethod.cs" />
+    <Compile Include="Apis\LastFm\LastFmMethodNameAttribute.cs" />
     <Compile Include="Apis\WolframAlpha\Format.cs" />
     <Compile Include="Apis\WolframAlpha\Reference.cs" />
     <Compile Include="Apis\WolframAlpha\WolframAlphaClient.cs" />
@@ -67,6 +70,7 @@
     <Compile Include="Interfaces\IBackend.cs" />
     <Compile Include="Interfaces\IMessage.cs" />
     <Compile Include="ModuleResolver.cs" />
+    <Compile Include="Module\LastFm.cs" />
     <Compile Include="Module\Extend.cs" />
     <Compile Include="Module\Google.cs" />
     <Compile Include="Module\Manners.cs" />
@@ -77,6 +81,7 @@
     <Compile Include="Module\Echo.cs" />
     <Compile Include="Module\GirlUp.cs" />
     <Compile Include="Module\IModule.cs" />
+    <Compile Include="Module\Wikipedia.cs" />
     <Compile Include="Module\WolframAlpha.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
