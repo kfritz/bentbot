@@ -55,8 +55,13 @@ namespace Bent.Bot.Backend.Xmpp.AgsXmpp
                 throw new Exception();                
             }
             else
-            {   // TODO: we need to determine if we should send a regular chat or a groupchat message
-                await Task.Run(() => this.xmpp.Send(new Message(jid.ToAgsJid(), MessageType.groupchat, body)));
+            {
+                MessageType messageType = MessageType.groupchat;
+                if (jid != jid.Bare)
+                {
+                    messageType = MessageType.chat;
+                }
+                await Task.Run(() => this.xmpp.Send(new Message(jid.ToAgsJid(), messageType, body)));
             }
         }
 
